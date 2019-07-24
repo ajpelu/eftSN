@@ -1,0 +1,12 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Metadata>
+      <MDI key="RepresentationType">THEMATIC</MDI>
+      <MDI key="STATISTICS_MAXIMUM">12</MDI>
+      <MDI key="STATISTICS_MEAN">5.4124146736729</MDI>
+      <MDI key="STATISTICS_MINIMUM">1</MDI>
+      <MDI key="STATISTICS_STDDEV">2.3282589513753</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">48.98</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>
