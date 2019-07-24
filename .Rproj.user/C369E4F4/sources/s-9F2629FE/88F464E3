@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1563875266152.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "88F464E3",
+    "lastKnownWriteTime" : 1563884466,
+    "last_content_update" : 1563884466094,
+    "path" : "~/Google Drive/MS/2019_DP_EFT/eftSN/script/generate_palette.R",
+    "project_path" : "script/generate_palette.R",
+    "properties" : {
+        "cursorPosition" : "35,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

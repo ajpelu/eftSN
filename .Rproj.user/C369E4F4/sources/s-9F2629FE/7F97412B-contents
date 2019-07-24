@@ -1,0 +1,15 @@
+library(shiny)
+
+ui <- fluidPage(
+  titlePanel("Europe"),
+  mainPanel(
+    plotOutput(outputId = "europe")))
+
+server <- function(input, output) {
+  
+  output$europe <- renderPlot({
+    qtm(Europe)
+  })
+}
+
+shinyApp(ui, server)
