@@ -4,18 +4,18 @@ library("raster")
 library("tmap")
 library("mapview")
 library("here")
-
+library("tidyverse")
+library("lubridate")
 
 
 # Read raster 
-# EVI 
 # evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016.tif"))
 
 evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016_v2.tif"))
 evi_mmax<- raster(here::here("data/EVI_MMAX_230m_2001-2016.tif"))
 evi_cv <- raster(here::here("data/EVI_sCV_230m_2001-2016.tif"))
 eft <- raster(here::here("/data/EFTs_230m_2001-2016.tif"))
-
+rareza <- raster(here::here("data/Rareza_230m_2001-2016.tif"))
 
 
 # Solve small variations of extent
@@ -54,11 +54,16 @@ eft_rat <- levels(eft)[[1]]
 eft_rat <- eft_rat %>% left_join(eft_levels, by=c("ID" = "eft_id"))
 levels(eft) <- eft_rat
 
+
+eftFactor <- deratify(eft, "eft_code")
+
+
 # Rename layers 
 names(evi_mean) <- "EVI_Mean"
 names(evi_mmax) <- "EVI_DateMax"
 names(evi_cv) <- "EVI_sCV"
 names(eft) <- "EFT"
+names(eftFactor) <- "EFT"
 
 
 
@@ -81,25 +86,54 @@ names(pixel)[4] <- "EVI_monthMax"
 puntos <- as.data.frame(rasterToPoints(evi_stack))
 
 
+puntos <- puntos %>% 
+  mutate(EVI_monthMax = as.character(month(ymd(010101) + months(puntos$EVI_DateMax-1), label=TRUE, abbr = TRUE))) %>% 
+  rename(lat = y, long = x) %>% 
+  inner_join(eft_palette %>% dplyr::select(eft_id, eft_code, eft_color), c("EFT" = "eft_id"))
+  
+
+puntitos <- SpatialPointsDataFrame(puntos[, c("long", "lat")], 
+                                   puntos[, c("eft_code", "EVI_Mean", "EVI_monthMax", "EVI_sCV", "eft_color")])
+
+
+
+
+
+
+
 
 
 
 #### Visualization
-
 tmap_mode("view")
 
-mapita <- tm_shape(eft, name = "EFT") + 
+mapita <- tm_shape(eftFactor, name = "EFT") + 
   tm_raster(palette = eft_palette$eft_color,
             alpha = 0.5,
             legend.is.portrait = FALSE) + 
-  tmap_options(max.categories = 64) + 
+  tmap_options(max.categories = 64) +
+  tm_shape(pixel) + tm_polygons(labels = NULL, 
+                                popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
+                                               "Seasonality (EVI scV)" = "EVI_sCV", 
+                                               "Phenology (Month max EVI)" = "EVI_monthMax"), 
+                                alpha=.01, border.col = NA, border.alpha = 0.001) 
+
+
+
+
++ 
   tm_shape(pixel) + tm_polygons(alpha=.01, border.col = NA, border.alpha = 0.01) +
   tm_view(view.legend.position = c("rigth", "bottom"))
   
-mapita
+mapita_p <- tm_shape(pixel) + tm_polygons(col = eft_palette$eft_color) +
+  tmap_options(max.categories = 64) 
 
 
-mapita2 <-  tm_shape(pixel) + tm_polygons(alpha=.01, border.col = NA, border.alpha = 0.01) 
+  
+  
+  
+  
+  tm_polygons(alpha=.01, border.col = NA, border.alpha = 0.01) 
 tmap_save(mapita, here::here("html/eft_map_v1.html"))
 
 

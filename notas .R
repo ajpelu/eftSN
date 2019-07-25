@@ -1,3 +1,7 @@
+
+
+
+
 #generate raster layers
 rst1 = matrix(runif(400, 0, 1),20, 20)# for suitability layer
 rst2 = matrix(rnorm(400, 800, 50), 20, 20)# for precipitation
