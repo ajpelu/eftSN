@@ -130,7 +130,14 @@ mapita_p <- tm_shape(pixel) + tm_polygons(col = eft_palette$eft_color) +
 
 
   
-  
+## Statistics 
+eft_df <- as.data.frame(eft, na.rm=TRUE) %>% 
+  dplyr::select(eft_code) %>% 
+  group_by(eft_code) %>% 
+  count() %>% inner_join(eft_palette, by ="eft_code")
+
+
+ggplot(eft_df, aes(y=phenology, x=seasonality)) + geom_point(aes(size=n)) + facet_wrap(~productivity)
   
   
   tm_polygons(alpha=.01, border.col = NA, border.alpha = 0.01) 
