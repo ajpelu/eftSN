@@ -24,6 +24,33 @@ eftLeg <- efts %>%
 write_csv(eftLeg, here::here("data/paleta_eft.csv"))
 
 
+## MMAX 
+
+mmax_palette <- data.frame(color = c(
+rgb(r=0,g=0,b=255,maxColorValue = 255),
+rgb(r=0,g=206,b=255,maxColorValue = 255),
+rgb(r=0,g=179,b=128,maxColorValue = 255),
+rgb(r=0,g=199,b=0,maxColorValue = 255),
+rgb(r=165,g=255,b=0,maxColorValue = 255),
+rgb(r=255,g=194,b=0,maxColorValue = 255), 
+rgb(r=255,g=123,b=0,maxColorValue = 255), 
+rgb(r=186,g=0,b=0,maxColorValue = 255),
+rgb(r=145,g=77,b=33,maxColorValue = 255),
+rgb(r=167,g=58,b=109,maxColorValue = 255),
+rgb(r=152,g=32,b=240,maxColorValue = 255),
+rgb(r=84,g=41,b=165,maxColorValue = 255)), 
+level = 1:12
+)
+
+write_csv(mmax_palette, here::here("data/paleta_mmax.csv"))
+
+
+
+
+
+
+
+
 # Test to plot 
 
 # 
