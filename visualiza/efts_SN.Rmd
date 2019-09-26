@@ -1,5 +1,5 @@
 ---
-title: "Ecosystem functional types (EFTs) of Sierra Nevada"
+title: "Ecosystem functioning and functional diversity of Sierra Nevada"
 output: 
   flexdashboard::flex_dashboard 
 editor_options: 
