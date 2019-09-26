@@ -21,6 +21,7 @@ library("RColorBrewer")
 
 
 ```{r}
+
 # Read raster 
 # evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016.tif"))
 
@@ -108,11 +109,10 @@ names(pixel)[4] <- "EVI_monthMax"
 # Remove 0 from etfvar 
 eft_var[eft_var < 1] <- NA
 
-
 ```
 
 
-EFTs
+Ecosystem Functioning
 =====================================  
 
 ```{r}
@@ -121,14 +121,14 @@ tmap_mode("view")
 mapita <- tm_basemap(c("Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
   tm_shape(eftFactor, name = "EFT") +
   tm_raster(palette = eft_palette$eft_color,
-            alpha = 0.5, legend.is.portrait = FALSE) +
+            alpha = 0.5, legend.is.portrait = FALSE, group = "EFT") +
   tmap_options(max.categories = 64) +
   tm_shape(pixel) + tm_polygons(labels = NULL,
                                 popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
                                                "Seasonality (EVI scV)" = "EVI_sCV",
                                                "Phenology (Month max EVI)" = "EVI_monthMax"),
-                                alpha=.01, border.col = NA, border.alpha = 0.001,
-                                group = "EVI values") +
+                                alpha=.01, border.col = NA, border.alpha = 0.001, 
+                                group = "EFT") +
   tm_shape(evi_mean, name = "EVI mean") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
             palette = "-RdBu", midpoint = .1853,
@@ -151,20 +151,20 @@ mapita <- tm_basemap(c("Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
             palette = "Reds", n = 10, contrast = c(0, 1), 
             group = "Dissimilarity") +
-  tm_shape(divesp, name = "DivEsp") + 
+  tm_shape(divesp, name = "EFT richnes") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, style = "pretty",
             palette = "Purples", n = 12, 
-            group = "DivEsp") 
+            group = "EFT richnes") 
   
 
 mapita <- mapita %>% 
-  tmap_leaflet() %>% 
+  tmap_leaflet() %>%
   leaflet::hideGroup("EVI mean") %>% 
   leaflet::hideGroup("EVI sCV") %>% 
   leaflet::hideGroup("EVI mMax") %>% 
   leaflet::hideGroup("EFT rarity") %>% 
   leaflet::hideGroup("EFT interannual variability") %>% 
-  leaflet::hideGroup("DivEsp") %>% 
+  leaflet::hideGroup("EFT richnes") %>% 
   leaflet::hideGroup("Dissimilarity") 
 
 mapita 
