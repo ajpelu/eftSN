@@ -28,6 +28,7 @@ library("RColorBrewer")
 evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016_v2.tif"))
 evi_mmax<- raster(here::here("data/EVI_MMAX_230m_2001-2016.tif"))
 evi_cv <- raster(here::here("data/EVI_sCV_230m_2001-2016.tif"))
+# evi_cvp <-  raster(here::here("data/EVI_sCV_230m_2001-2016_pangea.tif"))
 eft <- raster(here::here("/data/EFTs_230m_2001-2016.tif"))
 rareza <- raster(here::here("data/Rareza_230m_2001-2016.tif"))
 NAvalue(rareza) <- 0
@@ -131,29 +132,31 @@ mapita <- tm_basemap(c("Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
                                 group = "EFT") +
   tm_shape(evi_mean, name = "EVI mean") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = "-RdBu", midpoint = .1853,
+            palette = rainbow(20, rev = TRUE), stretch.palette = TRUE, 
             group = "EVI mean") +
   tm_shape(evi_cv, name = "EVI scV)") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
+            palette = rainbow(12, rev = TRUE), n = 12, 
+            breaks = c(seq(from=0, to = 0.01, by=0.001), Inf), 
             group = "EVI sCV") + 
   tm_shape(evi_mmax, name = "EVI mMax") + 
   tm_raster(palette = evi_mmax_palette$color, legend.is.portrait = FALSE,
             group = "EVI mMax") +
   tm_shape(rareza, name ="EFT rarity") +
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = "Blues", n = 10, 
+            palette = rainbow(12, rev = TRUE),  
             group = "EFT rarity") +
   tm_shape(eft_var, name = "EFT interannual variability") + 
   tm_raster(alpha = 0.5, legend.is.portrait = FALSE, colorNA = NULL,  
             group = "EFT interannual variability", 
-            palette = "BuPu", n =16) + 
+            palette = rainbow(12)) + 
   tm_shape(disimilitud, name = "Dissimilarity") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = "Reds", n = 10, contrast = c(0, 1), 
+            palette = rainbow(12), 
             group = "Dissimilarity") +
   tm_shape(divesp, name = "EFT richnes") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, style = "pretty",
-            palette = "Purples", n = 12, 
+            palette = rainbow(12), 
             group = "EFT richnes") 
   
 
