@@ -48,7 +48,7 @@ eft <- projectRaster(eft, evi_mean)
 
 # Units 
 evi_mean <-evi_mean / 10000
-evi_cv <- evi_cv / 100
+evi_cv <- round(evi_cv, 4)
 eft <- round(eft)
 evi_mmax <- round(evi_mmax)
 
@@ -91,6 +91,8 @@ names(eft) <- "EFT"
 names(eftFactor) <- "EFT"
 names(rareza) <- "EFT rarity"
 names(eft_var) <- "EFT var"
+names(divesp) <- "EFT richness"
+names(disimilitud) <- "Dissimilarity"
 
 
 # Create stack 
@@ -101,15 +103,17 @@ pixel <- merge(pixel, eft_palette[,c("eft_code", "eft_id")], by.x = "EFT", by.y 
 pixel@data <- pixel@data[,-1]
 names(pixel)[4] <- "EFT"
 pixel <- pixel[,c(4,1:3)]
-pixel$EVI_DateMaxMonth<- as.character(month(ymd(010101) + months(pixel$EVI_DateMax-1), label=TRUE, abbr = TRUE))
+
+pixel$EVI_DateMaxMonth <- month.abb[pixel$EVI_DateMax]
 pixel@data <- pixel@data[,-3]
 names(pixel)[4] <- "EVI_monthMax"
-
 
 
 # Remove 0 from etfvar 
 eft_var[eft_var < 1] <- NA
 
+evi_cv2 <- raster::calc(evi_cv, function(x){x[x>2] <- 2; return(x)})
+names(evi_cv2) <- "EVI_sCV"
 ```
 
 
@@ -122,42 +126,43 @@ tmap_mode("view")
 mapita <- tm_basemap(c("Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
   tm_shape(eftFactor, name = "EFT") +
   tm_raster(palette = eft_palette$eft_color,
-            alpha = 0.5, legend.is.portrait = FALSE, group = "EFT") +
+            alpha = 0.8, legend.is.portrait = FALSE, group = "EFT") +
   tmap_options(max.categories = 64) +
-  tm_shape(pixel) + tm_polygons(labels = NULL,
-                                popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
-                                               "Seasonality (EVI scV)" = "EVI_sCV",
-                                               "Phenology (Month max EVI)" = "EVI_monthMax"),
-                                alpha=.01, border.col = NA, border.alpha = 0.001, 
-                                group = "EFT") +
+  tm_shape(pixel) + 
+  tm_polygons(labels = NULL,
+              popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
+                             "Seasonality (EVI scV)" = "EVI_sCV",
+                             "Phenology (Month max EVI)" = "EVI_monthMax"),
+              alpha=.01, border.col = NA, border.alpha = 0.001, 
+              group = "EFT") +
   tm_shape(evi_mean, name = "EVI mean") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(20, rev = TRUE), stretch.palette = TRUE, 
+            palette = rainbow(10, rev = TRUE), style = "cont", stretch.palette = TRUE,
             group = "EVI mean") +
-  tm_shape(evi_cv, name = "EVI scV)") + 
+  tm_shape(evi_cv2, name = "EVI sCV)") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(12, rev = TRUE), n = 12, 
-            breaks = c(seq(from=0, to = 0.01, by=0.001), Inf), 
+            palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE,
+            # breaks = c(seq(from=0, to = 0.01, by=0.001), Inf), 
             group = "EVI sCV") + 
   tm_shape(evi_mmax, name = "EVI mMax") + 
   tm_raster(palette = evi_mmax_palette$color, legend.is.portrait = FALSE,
             group = "EVI mMax") +
   tm_shape(rareza, name ="EFT rarity") +
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(12, rev = TRUE),  
+            palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE,
             group = "EFT rarity") +
-  tm_shape(eft_var, name = "EFT interannual variability") + 
+  tm_shape(eft_var, name = "EFT inter-annual variability") + 
   tm_raster(alpha = 0.5, legend.is.portrait = FALSE, colorNA = NULL,  
-            group = "EFT interannual variability", 
-            palette = rainbow(12)) + 
+            group = "EFT inter-annual variability", 
+            palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE) + 
   tm_shape(disimilitud, name = "Dissimilarity") + 
   tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(12), 
+            palette = rainbow(8), style = "cont", stretch.palette = TRUE,
             group = "Dissimilarity") +
-  tm_shape(divesp, name = "EFT richnes") + 
-  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, style = "pretty",
-            palette = rainbow(12), 
-            group = "EFT richnes") 
+  tm_shape(divesp, name = "EFT richness") + 
+  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
+            palette = rainbow(8), style = "cont", stretch.palette = TRUE, 
+            group = "EFT richness") 
   
 
 mapita <- mapita %>% 
@@ -166,8 +171,8 @@ mapita <- mapita %>%
   leaflet::hideGroup("EVI sCV") %>% 
   leaflet::hideGroup("EVI mMax") %>% 
   leaflet::hideGroup("EFT rarity") %>% 
-  leaflet::hideGroup("EFT interannual variability") %>% 
-  leaflet::hideGroup("EFT richnes") %>% 
+  leaflet::hideGroup("EFT inter-annual variability") %>% 
+  leaflet::hideGroup("EFT richness") %>% 
   leaflet::hideGroup("Dissimilarity") 
 
 mapita 
@@ -192,6 +197,10 @@ Here, we presents a description of the spatial heterogeneity and temporal variab
 
 + Paruelo, J. M., Jobbágy, E. G., & Sala, O. E. 2001. Current distribution of ecosystem functional types in temperate South America. Ecosystems, 4(7), 683-698. doi: [10.1007/s10021-001-0037-9](https://doi.org/10.1007/s10021-001-0037-9)
 
+**More info**
+
++ Definition of [Ecosystem Functional Type](https://en.wikipedia.org/wiki/Ecosystem_Functional_Type) in Wikipedia. 
+
 ### Ecosystem Functional Attributes (EFAs) 
 We identified three EFAs that capture most of the variance in the time series of vegetation indices and with a meaningful biological significance (Paruelo et al., 2001; Alcaraz-Segura et al., 2006). These attributes were calculated from the EVI seasonal curve or annual dynamics: the annual mean (***EVI_mean***; an estimator of primary production), the EVI seasonal coefficient of variation (***EVI_sCV***; a descriptor of seasonality), and the date of maximum EVI (***EVI_DMAX***; an indicator of phenology). To summarize the EFAs of 2001-2016, we calculated the mean of the period for each attribute.
 
@@ -203,7 +212,7 @@ In order to characterize ecosystem functional diversity we used EFT richness and
 
 + ***EFT richness*** map was calculated for each year by counting the number of different EFTs within a 4×4-pixel moving window (924 x 924 m; ~ 1 km^2) across the study area (Alcaraz-Segura et al., 2013). Then, an average richness map across all years was obtained. 
 
-+ ***EFT rarity*** map was calculated for each year as the relative extension of each EFT compared to the most abundant EFT (\ref{Eq:1}) (Cabello et al., 2013). Then, we calculated an average rarity map across the period.
++ ***EFT rarity*** map was calculated for each year as the relative extension of each EFT compared to the most abundant EFT (Cabello et al., 2013). Then, we calculated an average rarity map across the period.
 
 \begin{equation}
  \label{Eq:1}
