@@ -17,14 +17,188 @@ library("mapview")
 library("lubridate")
 library("leaflet")
 library("RColorBrewer")
+library("leaflet.esri")
 ```
 
 
+
+```{r, interAnnualSeries}
+
+## EFA 
+evi_mean <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_Mean/Interannual_sumary/EVI_Mean_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+evi_mmax <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_DMAX/Interannual_sumary/EVI_DMAX_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+evi_sSD <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_sSD/Interannual_sumary/EVI_sSD_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+
+## EFT
+eft <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualMode_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+NAvalue(eft) <- 0
+
+eft_diss <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualDissimilarity_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+NAvalue(eft_diss) <- 0
+
+eft_var <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualVariability_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+NAvalue(eft_var) <- 0
+
+## EFD 
+
+eft_rarity <- raster(here::here("data/v2/Ecosystem_Functional_Diversity/EFT_Rarity/Interannual_sumary/EFT_Rarity_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+eft_richness <- raster(here::here("data/v2/Ecosystem_Functional_Diversity/EFT_Richness/Interannual_sumary/EFT_Richness_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+# Units  
+evi_mean <- evi_mean / 10000
+evi_sSD<- evi_sSD / 10000
+
+# Add months to evi_mmax
+evi_mmax_levels <- data.frame(level = 1:12, 
+                              month = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+evi_mmax <- ratify(evi_mmax)
+mmax_rat <-levels(evi_mmax)[[1]]
+mmax_rat <- mmax_rat %>% left_join(evi_mmax_levels, by = c("ID"="level"))
+levels(evi_mmax) <- mmax_rat 
+
+evi_mmax_palette <- read_csv(here::here("data/paleta_mmax.csv"))
+evi_mmax_palette <- evi_mmax_palette %>% left_join(evi_mmax_levels, by = "level")
+
+
+# eft attributes 
+# https://rdrr.io/cran/raster/man/factor.html
+eft_palette <- read_csv(here::here("data/paleta_eft.csv"))
+
+# Asign eft attributes 
+# see an example from https://annakrystalli.me/intro-r-gis/raster.html 
+eft_levels <- eft_palette %>% dplyr::select(eft_id, eft_code, eft_color) %>% as.data.frame()
+
+eft <- ratify(eft) 
+eft_rat <- levels(eft)[[1]]
+eft_rat <- eft_rat %>% left_join(eft_levels, by=c("ID" = "eft_id"))
+levels(eft) <- eft_rat
+
+eftFactor <- deratify(eft, "eft_code")
+
+# Rename layers 
+names(evi_mean) <- "EVI_Mean"
+names(evi_mmax) <- "EVI_DateMax"
+names(evi_sSD) <- "EVI_sSD"
+names(eft) <- "EFT"
+names(eftFactor) <- "EFT"
+names(eft_var) <- "EFT var"
+names(eft_diss) <- "Dissimilarity"
+names(eft_rarity) <- "EFT rarity"
+names(eft_richness) <- "EFT richness"
+
+```
+
+
+Ecosystem Functioning
+=====================================  
+
 ```{r}
+# Palettes 
+
+
+p_evi_mean <- colorNumeric(rainbow(10, rev = TRUE), domain=values(evi_mean), na.color = "transparent")
+p_evi_sSD <- colorNumeric(rainbow(8, rev = TRUE), domain = values(evi_sSD), na.color = "transparent")
+
+p_eft_diss <- colorNumeric(rainbow(10, rev = TRUE), domain = NULL, na.color = "transparent")
+p_eft_var <- colorNumeric(rainbow(8, rev=TRUE), domain = values(eft_var), na.color = "transparent")
+
+pal <- colorNumeric(rainbow(10), domain = NULL, na.color = "transparent")
+
+
+mb <- leaflet() %>% 
+  addProviderTiles("Esri.WorldImagery", group="Satellite") %>%
+  addLayersControl(baseGroups = c("Satellite"),
+                   overlayGroups = c("EFT", "EVI mean", "EVI mMax", "EVI sSD", 
+                                     "EFT inter-annual variability", "EFT Dissimilarity",
+                                     "EFT richness", "EFT rarity"),
+                   options = layersControlOptions(collapsed = TRUE)) 
+
+# EFTs 
+m <- mb %>% 
+  # EFTs 
+  addRasterImage(eftFactor, group = "EFT",
+                 colors = eft_palette$eft_color, opacity = 0.6) %>% 
+  addLegend(title = "EFT", colors = eft_palette$eft_color, 
+            labels = eft_palette$eft_nameLegend,
+            group = "EFT") %>% 
+  # EVI mean 
+  addRasterImage(evi_mean, group = "EVI mean", 
+                 colors = p_evi_mean) %>% 
+  addLegend(title = "EVI mean", pal = p_evi_mean, 
+            values = values(evi_mean), 
+            group = "EVI mean") %>%
+  # EVI mmax
+  addRasterImage(evi_mmax,
+                 group = "EVI mMax", 
+                 colors = evi_mmax_palette$color) %>% 
+  addLegend(title = "EVI mMax", colors = evi_mmax_palette$color, 
+            labels = evi_mmax_palette$month,
+            group = "EVI mMax") %>% 
+  # EVI sSD
+  addRasterImage(evi_sSD, group = "EVI sSD",
+                 colors = p_evi_sSD) %>% 
+  addLegend(title = "EVI sSD", 
+            pal = p_evi_sSD, 
+            values = values(evi_sSD), 
+            group = "EVI sSD") %>% 
+  # EFT var 
+  addRasterImage(eft_var, group = "EFT inter-annual variability",
+                 colors = p_eft_var) %>% 
+  addLegend(title = "EFT inter-annual variability", 
+            pal = p_eft_var, 
+            values = values(eft_var), 
+            group = "EFT inter-annual variability") %>% 
+  # EFT diss 
+  addRasterImage(eft_diss, group = "EFT Dissimilarity",
+                 colors = p_eft_diss) %>% 
+  addLegend(title = "Dissimilarity", 
+            pal = p_eft_diss, 
+            values = values(eft_diss), 
+            group = "EFT Dissimilarity") %>% 
+  # EFT rarity 
+  addRasterImage(eft_rarity, group = "EFT rarity", 
+                 colors = pal) %>% 
+  addLegend(title = "EFT rarity", pal = pal,
+            values = values(eft_rarity), 
+            group = "EFT rarity") %>% 
+  # EFT richness 
+  addRasterImage(eft_richness, group = "EFT richness", 
+                 colors = pal) %>% 
+  addLegend(title = "EFT richness", pal = pal, 
+            values = values(eft_richness), 
+            group = "EFT richness") 
+  
+
+mapita <- m %>% 
+  leaflet::hideGroup("EVI mean") %>% 
+  leaflet::hideGroup("EVI sSD") %>% 
+  leaflet::hideGroup("EVI mMax") %>% 
+  leaflet::hideGroup("EFT inter-annual variability") %>% 
+  leaflet::hideGroup("EFT Dissimilarity") %>% 
+  leaflet::hideGroup("EFT richness") %>% 
+  leaflet::hideGroup("EFT rarity") %>% 
+  leaflet::hideGroup("Dissimilarity") 
+  
+mapita
+```
+
+
+
+
+
+
+
+
+#### OLD 
+
+```{r, eval=FALSE, echo=FALSE}
 
 # Read raster 
-# evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016.tif"))
-
 evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016_v2.tif"))
 evi_mmax<- raster(here::here("data/EVI_MMAX_230m_2001-2016.tif"))
 evi_cv <- raster(here::here("data/EVI_sCV_230m_2001-2016.tif"))
@@ -121,35 +295,43 @@ Ecosystem Functioning
 =====================================  
 
 ```{r}
+require("pals")
 tmap_mode("view")
 
-mapita <- tm_basemap(c("Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
+mapita <- tm_basemap(c("Esri.WorldImagery", "Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
+  # eft 
   tm_shape(eftFactor, name = "EFT") +
   tm_raster(palette = eft_palette$eft_color,
-            alpha = 0.8, legend.is.portrait = FALSE, group = "EFT") +
-  tmap_options(max.categories = 64) +
-  tm_shape(pixel) + 
-  tm_polygons(labels = NULL,
-              popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
-                             "Seasonality (EVI scV)" = "EVI_sCV",
-                             "Phenology (Month max EVI)" = "EVI_monthMax"),
-              alpha=.01, border.col = NA, border.alpha = 0.001, 
-              group = "EFT") +
+            alpha = 0.5, legend.is.portrait = FALSE, group = "EFT") +
+  tmap_options(max.categories = 64) + 
+  # evi_mean
   tm_shape(evi_mean, name = "EVI mean") + 
-  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(10, rev = TRUE), style = "cont", stretch.palette = TRUE,
-            group = "EVI mean") +
+  
+  tm_raster(alpha=.7, legend.is.portrait = FALSE, colorNA = NULL, 
+            palette = rainbow(10, rev = TRUE), style = "cont", 
+            stretch.palette = TRUE,
+            group = "EVI mean")
+
+# +
+#   tm_shape(pixel) + 
+#   tm_polygons(labels = NULL,
+#               popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
+#                              "Seasonality (EVI scV)" = "EVI_sCV",
+#                              "Phenology (Month max EVI)" = "EVI_monthMax"),
+#               alpha=.01, border.col = NA, border.alpha = 0.001, 
+#               group = "EFT") +
+ +
   tm_shape(evi_cv2, name = "EVI sCV)") + 
-  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
+  tm_raster(alpha=.7, legend.is.portrait = FALSE, colorNA = NULL, 
             palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE,
             # breaks = c(seq(from=0, to = 0.01, by=0.001), Inf), 
             group = "EVI sCV") + 
   tm_shape(evi_mmax, name = "EVI mMax") + 
-  tm_raster(palette = evi_mmax_palette$color, legend.is.portrait = FALSE,
+  tm_raster(alpha=.7, palette = evi_mmax_palette$color, legend.is.portrait = FALSE,
             group = "EVI mMax") +
   tm_shape(rareza, name ="EFT rarity") +
-  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE,
+  tm_raster(alpha=.7, legend.is.portrait = FALSE, colorNA = NULL, 
+            palette = kovesi.rainbow(20), style = "cont",
             group = "EFT rarity") +
   tm_shape(eft_var, name = "EFT inter-annual variability") + 
   tm_raster(alpha = 0.5, legend.is.portrait = FALSE, colorNA = NULL,  
@@ -246,6 +428,22 @@ The **data** used for this visualization are available at:
 **Developer**: Pérez-Luque, AJ [ajperez@ugr.es](mailto:ajperez@ugr.es)  
 
 
+```{r}
 
+
+library(tidyverse)
+
+leaflet() %>% 
+  addTiles() %>% 
+  addRasterImage(rareza, opacity = 0.4) 
+                 
+
+
+  
+  
+
+
+```
+ 
 
 

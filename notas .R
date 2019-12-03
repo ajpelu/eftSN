@@ -1,5 +1,17 @@
 
 
+library("raster")
+library("rgdal")
+
+
+
+rarity <- raster("/Users/ajpelu/Downloads/EFT_rarity_230m_2001-2016.tif")
+rarity 
+
+
+writeRaster(rarity,"/Users/ajpelu/Downloads/EFT_rarity_230m_2001-2016RR.tif", options=c('TFW=YES'))
+
+
 
 
 #generate raster layers
