@@ -1,9 +1,7 @@
 ---
 title: "Ecosystem functioning and functional diversity of Sierra Nevada"
 output: 
-  flexdashboard::flex_dashboard 
-editor_options: 
-  chunk_output_type: console
+  flexdashboard::flex_dashboard
 ---
 
 ```{r setup, include=FALSE}
@@ -18,12 +16,11 @@ library("lubridate")
 library("leaflet")
 library("RColorBrewer")
 library("leaflet.esri")
+library("shiny")
 ```
 
 
-
 ```{r, interAnnualSeries}
-
 ## EFA 
 evi_mean <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_Mean/Interannual_sumary/EVI_Mean_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
 
@@ -190,186 +187,13 @@ mapita
 
 
 
-
-
-
-
-#### OLD 
-
-```{r, eval=FALSE, echo=FALSE}
-
-# Read raster 
-evi_mean <- raster(here::here("data/EVI_medio_230m_2001-2016_v2.tif"))
-evi_mmax<- raster(here::here("data/EVI_MMAX_230m_2001-2016.tif"))
-evi_cv <- raster(here::here("data/EVI_sCV_230m_2001-2016.tif"))
-# evi_cvp <-  raster(here::here("data/EVI_sCV_230m_2001-2016_pangea.tif"))
-eft <- raster(here::here("/data/EFTs_230m_2001-2016.tif"))
-rareza <- raster(here::here("data/Rareza_230m_2001-2016.tif"))
-NAvalue(rareza) <- 0
-eft_var <- raster(here::here("data/Variabilidad_interanual_230m_2001-2016.tif"))
-
-disimilitud <- raster(here::here("data/Disimilud_EFTs_1840m_2001-2016.tif"))
-NAvalue(disimilitud) <- 1
-
-divesp <- raster(here::here("data/DivEspaMediaEFTs_1840m_2001-2016_.tif"))
-NAvalue(divesp) <- 0
-
-# Solve small variations of extent
-evi_mmax <- projectRaster(evi_mmax, evi_mean)
-evi_cv <- projectRaster(evi_cv, evi_mean)
-eft <- projectRaster(eft, evi_mean)
-
-
-# Units 
-evi_mean <-evi_mean / 10000
-evi_cv <- round(evi_cv, 4)
-eft <- round(eft)
-evi_mmax <- round(evi_mmax)
-
-
-
-# Add months to evi_mmax
-evi_mmax_levels <- data.frame(level = 1:12, 
-                              month = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
-evi_mmax <- ratify(evi_mmax)
-mmax_rat <-levels(evi_mmax)[[1]]
-mmax_rat <- mmax_rat %>% left_join(evi_mmax_levels, by = c("ID"="level"))
-levels(evi_mmax) <- mmax_rat 
-
-
-evi_mmax_palette <- read_csv(here::here("data/paleta_mmax.csv"))
-
-
-# eft attributes 
-# https://rdrr.io/cran/raster/man/factor.html
-eft_palette <- read_csv(here::here("data/paleta_eft.csv"))
-
-# Asign eft attributes 
-# see an example from https://annakrystalli.me/intro-r-gis/raster.html 
-eft_levels <- eft_palette %>% dplyr::select(eft_id, eft_code, eft_color) %>% as.data.frame()
-
-eft <- ratify(eft) 
-eft_rat <- levels(eft)[[1]]
-eft_rat <- eft_rat %>% left_join(eft_levels, by=c("ID" = "eft_id"))
-levels(eft) <- eft_rat
-
-
-eftFactor <- deratify(eft, "eft_code")
-
-
-# Rename layers 
-names(evi_mean) <- "EVI_Mean"
-names(evi_mmax) <- "EVI_DateMax"
-names(evi_cv) <- "EVI_sCV"
-names(eft) <- "EFT"
-names(eftFactor) <- "EFT"
-names(rareza) <- "EFT rarity"
-names(eft_var) <- "EFT var"
-names(divesp) <- "EFT richness"
-names(disimilitud) <- "Dissimilarity"
-
-
-# Create stack 
-evi_stack <- stack(eft, evi_mean, evi_mmax, evi_cv, RAT = TRUE)
-
-pixel <- rasterToPolygons(evi_stack)
-pixel <- merge(pixel, eft_palette[,c("eft_code", "eft_id")], by.x = "EFT", by.y = "eft_id")
-pixel@data <- pixel@data[,-1]
-names(pixel)[4] <- "EFT"
-pixel <- pixel[,c(4,1:3)]
-
-pixel$EVI_DateMaxMonth <- month.abb[pixel$EVI_DateMax]
-pixel@data <- pixel@data[,-3]
-names(pixel)[4] <- "EVI_monthMax"
-
-
-# Remove 0 from etfvar 
-eft_var[eft_var < 1] <- NA
-
-evi_cv2 <- raster::calc(evi_cv, function(x){x[x>2] <- 2; return(x)})
-names(evi_cv2) <- "EVI_sCV"
-```
-
-
-Ecosystem Functioning
-=====================================  
-
-```{r}
-require("pals")
-tmap_mode("view")
-
-mapita <- tm_basemap(c("Esri.WorldImagery", "Esri.WorldGrayCanvas", "Esri.WorldTopoMap")) +
-  # eft 
-  tm_shape(eftFactor, name = "EFT") +
-  tm_raster(palette = eft_palette$eft_color,
-            alpha = 0.5, legend.is.portrait = FALSE, group = "EFT") +
-  tmap_options(max.categories = 64) + 
-  # evi_mean
-  tm_shape(evi_mean, name = "EVI mean") + 
-  
-  tm_raster(alpha=.7, legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(10, rev = TRUE), style = "cont", 
-            stretch.palette = TRUE,
-            group = "EVI mean")
-
-# +
-#   tm_shape(pixel) + 
-#   tm_polygons(labels = NULL,
-#               popup.vars = c("Productivity (EVI mean)" = "EVI_Mean",
-#                              "Seasonality (EVI scV)" = "EVI_sCV",
-#                              "Phenology (Month max EVI)" = "EVI_monthMax"),
-#               alpha=.01, border.col = NA, border.alpha = 0.001, 
-#               group = "EFT") +
- +
-  tm_shape(evi_cv2, name = "EVI sCV)") + 
-  tm_raster(alpha=.7, legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE,
-            # breaks = c(seq(from=0, to = 0.01, by=0.001), Inf), 
-            group = "EVI sCV") + 
-  tm_shape(evi_mmax, name = "EVI mMax") + 
-  tm_raster(alpha=.7, palette = evi_mmax_palette$color, legend.is.portrait = FALSE,
-            group = "EVI mMax") +
-  tm_shape(rareza, name ="EFT rarity") +
-  tm_raster(alpha=.7, legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = kovesi.rainbow(20), style = "cont",
-            group = "EFT rarity") +
-  tm_shape(eft_var, name = "EFT inter-annual variability") + 
-  tm_raster(alpha = 0.5, legend.is.portrait = FALSE, colorNA = NULL,  
-            group = "EFT inter-annual variability", 
-            palette = rainbow(8, rev = TRUE), style = "cont", stretch.palette = TRUE) + 
-  tm_shape(disimilitud, name = "Dissimilarity") + 
-  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(8), style = "cont", stretch.palette = TRUE,
-            group = "Dissimilarity") +
-  tm_shape(divesp, name = "EFT richness") + 
-  tm_raster(legend.is.portrait = FALSE, colorNA = NULL, 
-            palette = rainbow(8), style = "cont", stretch.palette = TRUE, 
-            group = "EFT richness") 
-  
-
-mapita <- mapita %>% 
-  tmap_leaflet() %>%
-  leaflet::hideGroup("EVI mean") %>% 
-  leaflet::hideGroup("EVI sCV") %>% 
-  leaflet::hideGroup("EVI mMax") %>% 
-  leaflet::hideGroup("EFT rarity") %>% 
-  leaflet::hideGroup("EFT inter-annual variability") %>% 
-  leaflet::hideGroup("EFT richness") %>% 
-  leaflet::hideGroup("Dissimilarity") 
-
-mapita 
-
-```
-
-
-
 Info
 =====================================
 
 Column {.tabset}
 -----------------------------------------------------------------------
 
-Here, we presents a description of the spatial heterogeneity and temporal variability of the ecosystem functioning of Sierra Nevada (SE Spain) from the vegetation dynamics captured through the spectral vegetation index EVI (Enhanced Vegetation Index) since 2001 to 2016 (product [MOD13Q1.006](https://lpdaac.usgs.gov/products/mod13q1v006/) from MODIS sensor). First, we provided three Ecosystem Functional Attributes (**EFAs**) (i.e., annual primary production, seasonality and phenology of carbon gains), as well as their integration into a synthetic mapping of Ecosystem Functional Types (EFTs). Second, we provided two measures of functional diversity, **EFT richness** and **EFT rarity**. Finally, to show which are the most stable and variable zones between year in terms of ecosystem functioning, we delivered the interannual variability in ecosystem functioning from two measures, EFTs interannual variability and EFTs interannual similarity. 
+Here, we presents a description of the spatial heterogeneity and temporal variability of the ecosystem functioning of Sierra Nevada (SE Spain) from the vegetation dynamics captured through the spectral vegetation index EVI (Enhanced Vegetation Index) since 2001 to 2018 (product [MOD13Q1.006](https://lpdaac.usgs.gov/products/mod13q1v006/) from MODIS sensor). First, we provided three Ecosystem Functional Attributes (**EFAs**) (i.e., annual primary production, seasonality and phenology of carbon gains), as well as their integration into a synthetic mapping of Ecosystem Functional Types (EFTs). Second, we provided two measures of functional diversity, **EFT richness** and **EFT rarity**. Finally, to show which are the most stable and variable zones between year in terms of ecosystem functioning, we delivered the interannual variability in ecosystem functioning from two measures, EFTs interannual variability and EFTs interannual similarity. 
 
 **References**
 
@@ -384,10 +208,10 @@ Here, we presents a description of the spatial heterogeneity and temporal variab
 + Definition of [Ecosystem Functional Type](https://en.wikipedia.org/wiki/Ecosystem_Functional_Type) in Wikipedia. 
 
 ### Ecosystem Functional Attributes (EFAs) 
-We identified three EFAs that capture most of the variance in the time series of vegetation indices and with a meaningful biological significance (Paruelo et al., 2001; Alcaraz-Segura et al., 2006). These attributes were calculated from the EVI seasonal curve or annual dynamics: the annual mean (***EVI_mean***; an estimator of primary production), the EVI seasonal coefficient of variation (***EVI_sCV***; a descriptor of seasonality), and the date of maximum EVI (***EVI_DMAX***; an indicator of phenology). To summarize the EFAs of 2001-2016, we calculated the mean of the period for each attribute.
+We identified three EFAs that capture most of the variance in the time series of vegetation indices and with a meaningful biological significance (Paruelo et al., 2001; Alcaraz-Segura et al., 2006). These attributes were calculated from the EVI seasonal curve or annual dynamics: the annual mean (***EVI_mean***; an estimator of primary production), the EVI seasonal coefficient of variation (***EVI_sCV***; a descriptor of seasonality), and the date of maximum EVI (***EVI_DMAX***; an indicator of phenology). To summarize the EFAs of 2001-2018, we calculated the mean of the period for each attribute.
 
 ### Ecosystem Functional Types (EFTs)
-EFTs were identified following Alcaraz-Segura et al., (2013), from the three EFAs obtained. The range of values of each EFA was divided into four intervals, giving a potential number of 64 EFTs (4 × 4 × 4). For EVI_DMAX, the four intervals agreed with the four seasons of the year. For EVI_mean and EVI_sCV, we extracted the first, second, and third quartiles for each year and then calculated the quartiles means for the 16-year period. To name EFTs, we used two letters and a number: the first capital letter indicates net primary production (EVI_mean), increasing from A to D; the second small letter represents seasonality (EVI_sCV), decreasing from a to d; the numbers are a phenological indicator of the growing season (EVI_DMAX), with values 1-spring, 2-summer, 3-autumn, 4-winter. To summarize the EFTs of the 2001–2016 period, we calculated the dominant EFT (i.e., the mode value for each pixel) of the period.
+EFTs were identified following Alcaraz-Segura et al., (2013), from the three EFAs obtained. The range of values of each EFA was divided into four intervals, giving a potential number of 64 EFTs (4 × 4 × 4). For EVI_DMAX, the four intervals agreed with the four seasons of the year. For EVI_mean and EVI_sCV, we extracted the first, second, and third quartiles for each year and then calculated the quartiles means for the 16-year period. To name EFTs, we used two letters and a number: the first capital letter indicates net primary production (EVI_mean), increasing from A to D; the second small letter represents seasonality (EVI_sCV), decreasing from a to d; the numbers are a phenological indicator of the growing season (EVI_DMAX), with values 1-spring, 2-summer, 3-autumn, 4-winter. To summarize the EFTs of the 2001–2018 period, we calculated the dominant EFT (i.e., the mode value for each pixel) of the period.
 
 ### Ecosystem Functional Diversity 
 In order to characterize ecosystem functional diversity we used EFT richness and EFT rarity as indicators: 
@@ -405,7 +229,7 @@ where $\text{Area } EFT_{max}$ is the area occupied by the most abundant EFT and
 
 ### Stability in ecosystem functioning
 
-In order to show which are the most stable areas and with the greatest inter-annual variability (either due to directional changes or fluctuations) in ecosystem functioning, the number of different EFTs that occurred in the same pixel in the period 2001-2016.
+In order to show which are the most stable areas and with the greatest inter-annual variability (either due to directional changes or fluctuations) in ecosystem functioning, the number of different EFTs that occurred in the same pixel in the period 2001-2018.
 
 To obtain a measure equal to the interannual variability but at landscape level, the dissimilarity, i.e., Jaccard's  index 1-coefficient, was calculated. Dissimilarity values range from 0 to 1, with 1 being the highest degree of dissimilarity in composition and relative abundance of EFTs and 0 being absent.
 
@@ -427,23 +251,5 @@ The **data** used for this visualization are available at:
 <br>
 **Developer**: Pérez-Luque, AJ [ajperez@ugr.es](mailto:ajperez@ugr.es)  
 
-
-```{r}
-
-
-library(tidyverse)
-
-leaflet() %>% 
-  addTiles() %>% 
-  addRasterImage(rareza, opacity = 0.4) 
-                 
-
-
-  
-  
-
-
-```
- 
 
 
