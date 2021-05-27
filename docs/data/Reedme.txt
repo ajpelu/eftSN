@@ -1,0 +1,22 @@
+Contenido data paper Sierra Nevada:
+
+1. Disimilitud_EFT_~1840m_2001-2016: 1-coefficiente de Jaccard para el periodo 2001-2016.
+Ventana de 8 x 8 píxeles MODIS (230m*8=1840m)
+
+2. DivEspaMediaEFTs_1840m_2001-2016: Riqueza de EFTs. Número de EFTs en una ventana móvil para el periodo 2001-2016.
+Ventana de 8 x 8 píxeles MODIS (230m*8=1840m)
+
+3. EFTs_230m_2001-2016: Tipos Funcionales de Ecosistemas a 230 m para el periodo 2001-2016.
+
+4. EVI_medio_230m_2001-2016: EVI medio (producción primaria) a 230 m a 230 m para el periodo 2001-2016.
+
+5. EVI_MMAX_230m_2001-2016: Momento de máximo EVI (fenología) a 230 m para el periodo 2001-2016.
+
+6. EVI_sCV_230m_2001-2016: coeficiente de variación de EVI (estacionalidad) a 230 m para el periodo 2001-2016.
+
+7. Rareza_230m_2001-2016: Rareza de EFTs a 230 m para el periodo 2001-2016.
+
+8. Variabilidad_interanual_230m_2001-2016: Número de EFTs diferentes en un mismo píxel 230 m en el periodo 2001-2016.
+
+
+Todos los ráster están en formato .tif y en WGS84
