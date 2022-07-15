@@ -1,9 +1,9 @@
 {
-    "path" : "~/Google Drive/MS/DP/2019_DP_EFT/eftSN",
-    "sortOrder" : [
+    "path": "/Volumes/GoogleDrive/My Drive/MS/DP/2020_DP_EFT/eftSN/data/v2/yearly",
+    "sortOrder": [
         {
-            "ascending" : true,
-            "columnIndex" : 2
+            "columnIndex": 2,
+            "ascending": true
         }
     ]
 }
