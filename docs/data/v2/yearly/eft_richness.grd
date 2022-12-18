@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2022-07-15 16:34:22
+[georeference]
+nrows=164
+ncols=508
+xmin=-3.64373882
+ymin=36.913925142
+xmax=-2.586617563
+ymax=37.255200508
+projection=+proj=longlat +datum=WGS84 +no_defs
+[data]
+datatype=FLT4S
+byteorder=little
+nbands=18
+bandorder=BIL
+minvalue=1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1
+maxvalue=15:16:15:16:16:15:16:15:15:15:16:15:16:16:16:16:16:15
+nodatavalue=-3.4e+38
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=EFT_Richness_2001:EFT_Richness_2002:EFT_Richness_2003:EFT_Richness_2004:EFT_Richness_2005:EFT_Richness_2006:EFT_Richness_2007:EFT_Richness_2008:EFT_Richness_2009:EFT_Richness_2010:EFT_Richness_2011:EFT_Richness_2012:EFT_Richness_2013:EFT_Richness_2014:EFT_Richness_2015:EFT_Richness_2016:EFT_Richness_2017:EFT_Richness_2018

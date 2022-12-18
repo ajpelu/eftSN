@@ -26,12 +26,15 @@ prepareData <- function(path){
 
 # Average Series
 ## EVI mean  
-evi_mean_y <- prepareData(here::here("data/v2//Ecosystem_Functional_Attributes/EVI_Mean/Yearly")) %>% 
-  raster::writeRaster(here::here("data/v2/yearly/evi_mean.grd"), format = "raster", overwrite=TRUE)
+evi_mean_y <- prepareData(here::here("data/v2//Ecosystem_Functional_Attributes/EVI_Mean/Yearly")) 
+evi_mean_y <- evi_mean_y / 10000
+raster::writeRaster(evi_mean_y,
+                    here::here("data/v2/yearly/evi_mean.grd"), format = "raster", overwrite=TRUE)
 
 ## EVI sSD
-evi_sSD_y <- prepareData(here::here("data/v2//Ecosystem_Functional_Attributes/EVI_sSD/Yearly")) %>% 
-  raster::writeRaster(here::here("data/v2/yearly/evi_ssd.grd"), format = "raster", overwrite=TRUE)
+evi_sSD_y <- prepareData(here::here("data/v2//Ecosystem_Functional_Attributes/EVI_sSD/Yearly"))
+evi_sSD_y <- evi_sSD_y / 10000
+raster::writeRaster(evi_sSD_y, here::here("data/v2/yearly/evi_ssd.grd"), format = "raster", overwrite=TRUE)
 
 ## EVI MMAX
 evi_mmax_y <- prepareData(here::here("data/v2//Ecosystem_Functional_Attributes/EVI_DMAX/Yearly")) %>% 

@@ -1,0 +1,605 @@
+---
+title: "Ecosystem functioning and functional diversity of Sierra Nevada"
+output: 
+  flexdashboard::flex_dashboard:
+      theme: yeti
+      runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library("flexdashboard")
+library("tidyverse")
+library("here")
+library("raster")
+library("rasterVis")
+library("tmap")
+library("mapview")
+library("lubridate")
+library("leaflet")
+library("leaflet.extras")
+library("leaflet.opacity")
+library("RColorBrewer")
+library("leaflet.esri")
+library("shiny")
+library("leafem")
+```
+
+
+```{r interAnnualSeries}
+## EFA
+evi_mean <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_Mean/Interannual_sumary/EVI_Mean_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+evi_mmax <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_DMAX/Interannual_sumary/EVI_DMAX_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+evi_sSD <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_sSD/Interannual_sumary/EVI_sSD_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+## EFT
+eft <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualMode_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+NAvalue(eft) <- 0
+
+eft_diss <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualDissimilarity_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+NAvalue(eft_diss) <- 0
+
+eft_var <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualVariability_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+NAvalue(eft_var) <- 0
+
+## EFD
+
+eft_rarity <- raster(here::here("data/v2/Ecosystem_Functional_Diversity/EFT_Rarity/Interannual_sumary/EFT_Rarity_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+eft_richness <- raster(here::here("data/v2/Ecosystem_Functional_Diversity/EFT_Richness/Interannual_sumary/EFT_Richness_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
+
+# Units
+evi_mean <- evi_mean / 10000
+evi_sSD <- evi_sSD / 10000
+
+# Add months to evi_mmax
+evi_mmax_levels <- data.frame(
+  level = 1:12,
+  month = c(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  )
+)
+evi_mmax <- ratify(evi_mmax)
+mmax_rat <- levels(evi_mmax)[[1]]
+mmax_rat <- mmax_rat %>% left_join(evi_mmax_levels, by = c("ID" = "level"))
+levels(evi_mmax) <- mmax_rat
+
+evi_mmax_palette <- read_csv(here::here("data/paleta_mmax.csv"))
+evi_mmax_palette <- evi_mmax_palette %>% left_join(evi_mmax_levels, by = "level")
+
+
+# eft attributes
+# https://rdrr.io/cran/raster/man/factor.html
+eft_palette <- read_csv(here::here("data/paleta_eft.csv"))
+
+# Asign eft attributes
+# see an example from https://annakrystalli.me/intro-r-gis/raster.html
+eft_levels <- eft_palette %>%
+  dplyr::select(eft_id, eft_code, eft_color) %>%
+  as.data.frame()
+
+eft <- ratify(eft)
+eft_rat <- levels(eft)[[1]]
+eft_rat <- eft_rat %>% left_join(eft_levels, by = c("ID" = "eft_id"))
+levels(eft) <- eft_rat
+
+eftFactor <- deratify(eft, "eft_code")
+
+# Rename layers
+names(evi_mean) <- "EVI_Mean"
+names(evi_mmax) <- "EVI_DateMax"
+names(evi_sSD) <- "EVI_sSD"
+names(eft) <- "EFT"
+names(eftFactor) <- "EFT"
+names(eft_var) <- "EFT var"
+names(eft_diss) <- "Dissimilarity"
+names(eft_rarity) <- "EFT rarity"
+names(eft_richness) <- "EFT richness"
+```
+
+
+# Ecosystem Functioning
+ 
+```{r map}
+# Palettes
+p_evi_mean <- colorNumeric(rainbow(10, rev = TRUE), domain = values(evi_mean), na.color = "transparent")
+p_evi_sSD <- colorNumeric(rainbow(8, rev = TRUE), domain = values(evi_sSD), na.color = "transparent")
+
+# p_eft_diss <- colorNumeric(rainbow(10, rev = TRUE), domain = NULL, na.color = "transparent")
+p_eft_var <- colorNumeric(rainbow(8, rev = TRUE), domain = values(eft_var), na.color = "transparent")
+
+pal <- colorNumeric(rainbow(10), domain = NULL, na.color = "transparent")
+p_inversa <- colorNumeric(rainbow(10, rev = TRUE), domain = NULL, na.color = "transparent")
+
+
+myext <- extent(evi_mean)
+
+
+# opacity = 0.6
+m <- leaflet() %>%
+  # fitBounds(myext@xmin, myext@ymin, myext@xmax, myext@ymax) %>%
+  setView(lat = 37.09, lng = -3.1, 11) %>%
+  addTiles(group = "Basemap") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+  # EFTs
+  addRasterImage(eftFactor,
+    group = "EFT",
+    colors = eft_palette$eft_color
+  ) %>%
+  leafem::addImageQuery(eftFactor,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT",
+    position = "bottomleft",
+    digits = 0
+  ) %>%
+  addLegend(
+    title = "EFT", colors = eft_palette$eft_color,
+    labels = eft_palette$eft_nameLegend,
+    group = "EFT"
+  ) %>%
+  # EVI mean
+  addRasterImage(evi_mean,
+    group = "EVI mean",
+    colors = p_evi_mean
+  ) %>%
+  leafem::addImageQuery(evi_mean,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EVI mean",
+    position = "bottomleft",
+    digits = 3
+  ) %>%
+  addLegend(
+    title = "EVI mean", pal = p_evi_mean,
+    values = values(evi_mean),
+    group = "EVI mean"
+  ) %>%
+  # EVI mmax
+  addRasterImage(evi_mmax,
+    group = "EVI mMax",
+    colors = evi_mmax_palette$color
+  ) %>%
+  leafem::addImageQuery(evi_mmax,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EVI mMax",
+    position = "bottomleft",
+    digits = 0
+  ) %>%
+  addLegend(
+    title = "EVI mMax", colors = evi_mmax_palette$color,
+    labels = evi_mmax_palette$month,
+    group = "EVI mMax"
+  ) %>%
+  # EVI sSD
+  addRasterImage(evi_sSD,
+    group = "EVI sSD",
+    colors = p_evi_sSD
+  ) %>%
+  leafem::addImageQuery(evi_sSD,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EVI sSD",
+    position = "bottomleft",
+    digits = 3
+  ) %>%
+  addLegend(
+    title = "EVI sSD",
+    pal = p_evi_sSD,
+    values = values(evi_sSD),
+    group = "EVI sSD"
+  ) %>%
+  # EFT var
+  addRasterImage(eft_var,
+    group = "EFT inter-annual variability",
+    colors = p_eft_var
+  ) %>%
+  leafem::addImageQuery(eft_var,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT inter-annual variability",
+    position = "bottomleft",
+    digits = 2
+  ) %>%
+  addLegend(
+    title = "EFT inter-annual variability",
+    pal = p_eft_var,
+    values = values(eft_var),
+    group = "EFT inter-annual variability"
+  ) %>%
+  # EFT diss
+  addRasterImage(eft_diss,
+    group = "EFT Dissimilarity",
+    colors = p_inversa
+  ) %>%
+  leafem::addImageQuery(eft_diss,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT Dissimilarity",
+    position = "bottomleft",
+    digits = 1
+  ) %>%
+  addLegend(
+    title = "Dissimilarity",
+    pal = p_inversa,
+    values = values(eft_diss),
+    group = "EFT Dissimilarity"
+  ) %>%
+  # EFT rarity
+  addRasterImage(eft_rarity,
+    group = "EFT rarity",
+    colors = p_inversa
+  ) %>%
+  leafem::addImageQuery(eft_rarity,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT rarity",
+    position = "bottomleft",
+    digits = 1
+  ) %>%
+  addLegend(
+    title = "EFT rarity", pal = pal,
+    values = values(eft_rarity),
+    group = "EFT rarity"
+  ) %>%
+  # EFT richness
+  addRasterImage(eft_richness,
+    group = "EFT richness",
+    colors = p_inversa
+  ) %>%
+  leafem::addImageQuery(eft_richness,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT richness",
+    position = "bottomleft",
+    digits = 0
+  ) %>%
+  addLegend(
+    title = "EFT richness", pal = p_inversa,
+    values = values(eft_richness),
+    group = "EFT richness"
+  ) %>%
+  addLayersControl(
+    position = "topleft",
+    baseGroups = c("Satellite", "BaseMap"),
+    overlayGroups = c(
+      "EFT", "EVI mean", "EVI mMax", "EVI sSD",
+      "EFT inter-annual variability", "EFT Dissimilarity",
+      "EFT rarity", "EFT richness"
+    ),
+    options = layersControlOptions(collapsed = TRUE)
+  )
+
+mapita <- m %>%
+  leaflet::hideGroup("EVI mean") %>%
+  leaflet::hideGroup("EVI sSD") %>%
+  leaflet::hideGroup("EVI mMax") %>%
+  leaflet::hideGroup("EFT inter-annual variability") %>%
+  leaflet::hideGroup("EFT Dissimilarity") %>%
+  leaflet::hideGroup("EFT richness") %>%
+  leaflet::hideGroup("EFT rarity") %>%
+  leaflet::hideGroup("Dissimilarity")
+
+mapita
+```
+
+
+# Annual Maps
+
+```{r}
+# Read rasters
+evi_mean <- raster::stack(here::here("data/v2/yearly/evi_mean.grd"))
+evi_ssd <- raster::stack(here::here("data/v2/yearly/evi_ssd.grd"))
+evi_mmax <- raster::stack(here::here("data/v2/yearly/evi_mmax.grd"))
+eft <- raster::stack(here::here("data/v2/yearly/eft.grd"))
+eft_rarity <- raster::stack(here::here("data/v2/yearly/eft_rarity.grd"))
+eft_richness <- raster::stack(here::here("data/v2/yearly/eft_richness.grd"))
+
+# Auxiliar files for palettes
+evi_mmax_levels <- data.frame(
+  level = 1:12,
+  month = c(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  )
+)
+evi_mmax_palette <- read_csv(here::here("data/paleta_mmax.csv"))
+evi_mmax_palette <- evi_mmax_palette %>% left_join(evi_mmax_levels, by = "level")
+
+eft_palette <- read_csv(here::here("data/paleta_eft.csv"))
+# Asign eft attributes
+# see an example from https://annakrystalli.me/intro-r-gis/raster.html
+eft_levels <- eft_palette %>%
+  dplyr::select(eft_id, eft_code, eft_color) %>%
+  as.data.frame()
+``` 
+
+```{r}
+# ui <- fluidPage(
+#   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
+#   titlePanel("test raster layers"),
+#   # leafletOutput("map", width = "100%", height = "100%"),
+#   sidebarLayout(
+#     sidebarPanel(
+#       selectInput(
+#         inputId = "selectVariable",
+#         label = "Variable:",
+#         choices = c(
+#           "EVI Mean" = "EVI_Mean_",
+#           "EVI sSD" = "EVI_sSD_",
+#           "EVI DMAX" = "EVI_DMAX_",
+#           "EFTs" = "EFTs_",
+#           "EFT Rarity" = "EFT_Rarity_",
+#           "EFT Richness" = "EFT_Richness_"
+#         ),
+#         selected = "EVI Mean"
+#       ),
+# 
+#       selectInput(
+#         inputId = "selectYear",
+#         label = "Year:",
+#         choices = 2001:2018,
+#         selected = 2001
+#       ),
+# 
+#       downloadButton("downloadData", "Download data")
+#     ),
+# 
+#     mainPanel(leafletOutput("map", width = "100%"))
+#   )
+# )
+
+```
+
+```{r}
+
+shinyApp(
+  ui = fillPage(
+    tags$style(type = "text/css", "html, body {width:100%; height:100%}"),
+    leafletOutput("map", width = "100%", height = "1000"),
+    absolutePanel(
+        id = "controls", class = "panel panel-default", fixed = TRUE,
+        draggable = TRUE,
+        top = 60, left = 80, right = "auto", bottom = "auto",
+        width = 330, height = "auto",
+
+        h2("Select the raster"),
+
+        selectInput(
+          inputId = "selectVariable",
+          label = "Variable:",
+          choices = c(
+            "EVI Mean" = "EVI_Mean_",
+            "EVI sSD" = "EVI_sSD_",
+            "EVI DMAX" = "EVI_DMAX_",
+            "EFTs" = "EFTs_",
+            "EFT Rarity" = "EFT_Rarity_",
+            "EFT Richness" = "EFT_Richness_"
+          ),
+          selected = "EVI Mean"
+        ),
+
+        selectInput(
+          inputId = "selectYear",
+          label = "Year:",
+          choices = 2001:2018,
+          selected = 2001
+        ),
+
+        downloadButton("downloadData", "Download data")
+      )
+    
+  ),
+  
+  
+
+  server = function(input, output, session) {
+
+    #   } else if (input$selectVariable == "EFTs_"){
+    #     pal <- colorFactor(eft_palette$eft_color, domain = NULL,
+    #                        na.color = "#00000000")
+
+
+    # Define a basemap
+    basemap <- leaflet() %>%
+      setView(lat = 37.09, lng = -3.1, 11) %>%
+      addProviderTiles("Esri.WorldImagery")
+
+
+    rasterSelected <- reactive({
+
+      # Generate layer name
+      capa <- paste0(input$selectVariable, input$selectYear)
+
+      output <- list()
+
+      # Select raster, palette and title
+      if (stringr::str_detect(capa, "EVI_Mean_")) {
+        r <- evi_mean[[capa]]
+        paleta <- colorNumeric(rainbow(10, rev = TRUE),
+          domain = getValues(r),
+          na.color = "transparent"
+        )
+        title <- "EVI mean"
+        etiquetas <- NULL
+      } else if (stringr::str_detect(capa, "EVI_sSD_")) {
+        r <- evi_ssd[[capa]]
+        paleta <- colorNumeric(rainbow(8, rev = TRUE),
+          domain = getValues(r),
+          na.color = "transparent"
+        )
+        title <- "EVI SD"
+        etiquetas <- NULL
+      } else if (stringr::str_detect(capa, "EVI_DMAX_")) {
+        # Prepare raster
+        r <- ratify(evi_mmax[[capa]])
+        mmax_rat <- levels(r)[[1]]
+        mmax_rat <- mmax_rat %>%
+          left_join(evi_mmax_levels, by = c("ID" = "level"))
+        levels(r) <- mmax_rat
+        r[r == 0] <- NA
+
+        #  paleta <- evi_mmax_palette$color
+        paleta <- colorFactor(
+          palette = evi_mmax_palette$color,
+          domain = NULL,
+          na.color = "#00000000"
+        )
+
+        etiquetas <- NULL
+        title <- "EVI DMAX (month)"
+      } else if (stringr::str_detect(capa, "EFTs_")) {
+        r_aux <- eft[[capa]]
+        r_aux <- ratify(r_aux)
+        eft_rat <- levels(r_aux)[[1]]
+        eft_rat <- eft_rat %>% left_join(eft_levels, by = c("ID" = "eft_id"))
+        levels(r_aux) <- eft_rat
+        r_aux[r_aux == 0] <- NA
+
+        eftFactor <- deratify(r_aux, "eft_code")
+        r <- eftFactor
+
+        title <- "EFT"
+
+        paleta <- colorFactor(
+          palette = eft_palette$eft_color,
+          domain = NULL,
+          na.color = "#00000000"
+        )
+
+        etiquetas <- 1
+      } else if (stringr::str_detect(capa, "EFT_Rarity_")) {
+        r <- eft_rarity[[capa]]
+
+        paleta <- colorNumeric(rainbow(10, rev = TRUE),
+          domain = NULL,
+          na.color = "transparent"
+        )
+        title <- "EFT rarity"
+        etiquetas <- NULL
+      } else if (stringr::str_detect(capa, "EFT_Richness_")) {
+        r <- eft_richness[[capa]]
+
+        paleta <- colorNumeric(rainbow(10, rev = TRUE),
+          domain = NULL,
+          na.color = "transparent"
+        )
+        title <- "EFT richness"
+        etiquetas <- NULL
+      }
+
+
+      output$r <- r
+      output$paleta <- paleta
+      output$title <- title
+      output$etiquetas <- etiquetas
+      output$capa_out
+
+      output
+    })
+
+    output$map <- renderLeaflet({
+      basemap %>%
+        addRasterImage(rasterSelected()$r, colors = rasterSelected()$paleta) %>%
+        addLegend(
+          title = rasterSelected()$title,
+          pal = rasterSelected()$paleta,
+          values = getValues(rasterSelected()$r),
+          position = "bottomright",
+          labFormat =
+            labelFormat(
+              if (!is.null(rasterSelected()$etiquetas)) {
+                if (rasterSelected()$etiquetas == 1) {
+                  eft_palette$eft_nameLegend
+                }
+              }
+            )
+        )
+    })
+
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste0(input$selectVariable, input$selectYear, ".tif")
+      },
+
+
+      content = function(file) {
+        raster::writeRaster(rasterSelected()$r, file,
+          format = "GTiff",
+          overwrite = TRUE
+        )
+      }
+    )
+  }
+)
+
+```
+
+
+
+
+# Info
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+Here, we presents a description of the spatial heterogeneity and temporal variability of the ecosystem functioning of Sierra Nevada (SE Spain) from the vegetation dynamics captured through the spectral vegetation index EVI (Enhanced Vegetation Index) since 2001 to 2018 (product [MOD13Q1.006](https://lpdaac.usgs.gov/products/mod13q1v006/) from MODIS sensor). First, we provided three Ecosystem Functional Attributes (**EFAs**) (i.e., annual primary production, seasonality and phenology of carbon gains), as well as their integration into a synthetic mapping of Ecosystem Functional Types (EFTs). Second, we provided two measures of functional diversity, **EFT richness** and **EFT rarity**. Finally, to show which are the most stable and variable zones between year in terms of ecosystem functioning, we delivered the interannual variability in ecosystem functioning from two measures, EFTs interannual variability and EFTs interannual similarity. 
+
+**References**
+
++ Alcaraz-Segura, D., Cabello, J., Paruelo, J. M., & Delibes, M. 2009. Use of descriptors of ecosystem functioning for monitoring a national park network: a remote sensing approach. Environmental Management, 43(1), 38-48. doi: [10.1007/s00267-008-9154-y](https://doi.org/10.1007/s00267-008-9154-y)
+
++ Alcaraz-Segura, D., Paruelo, J., Epstein, H., & Cabello, J. 2013. Environmental and human controls of ecosystem functional diversity in temperate South America. Remote Sensing, 5(1), 127-154. doi: [10.3390/rs5010127](https://doi.org/10.3390/rs5010127)
+
++ Paruelo, J. M., Jobbágy, E. G., & Sala, O. E. 2001. Current distribution of ecosystem functional types in temperate South America. Ecosystems, 4(7), 683-698. doi: [10.1007/s10021-001-0037-9](https://doi.org/10.1007/s10021-001-0037-9)
+
+**More info**
+
++ Definition of [Ecosystem Functional Type](https://en.wikipedia.org/wiki/Ecosystem_Functional_Type) in Wikipedia. 
+
+### Ecosystem Functional Attributes (EFAs) 
+We identified three EFAs that capture most of the variance in the time series of vegetation indices and with a meaningful biological significance (Paruelo et al., 2001; Alcaraz-Segura et al., 2006). These attributes were calculated from the EVI seasonal curve or annual dynamics: the annual mean (***EVI_mean***; an estimator of primary production), the EVI seasonal coefficient of variation (***EVI_sCV***; a descriptor of seasonality), and the date of maximum EVI (***EVI_DMAX***; an indicator of phenology). To summarize the EFAs of 2001-2018, we calculated the mean of the period for each attribute.
+
+### Ecosystem Functional Types (EFTs)
+EFTs were identified following Alcaraz-Segura et al., (2013), from the three EFAs obtained. The range of values of each EFA was divided into four intervals, giving a potential number of 64 EFTs (4 × 4 × 4). For EVI_DMAX, the four intervals agreed with the four seasons of the year. For EVI_mean and EVI_sCV, we extracted the first, second, and third quartiles for each year and then calculated the quartiles means for the 16-year period. To name EFTs, we used two letters and a number: the first capital letter indicates net primary production (EVI_mean), increasing from A to D; the second small letter represents seasonality (EVI_sCV), decreasing from a to d; the numbers are a phenological indicator of the growing season (EVI_DMAX), with values 1-spring, 2-summer, 3-autumn, 4-winter. To summarize the EFTs of the 2001–2018 period, we calculated the dominant EFT (i.e., the mode value for each pixel) of the period.
+
+### Ecosystem Functional Diversity 
+In order to characterize ecosystem functional diversity we used EFT richness and EFT rarity as indicators: 
+
++ ***EFT richness*** map was calculated for each year by counting the number of different EFTs within a 4×4-pixel moving window (924 x 924 m; ~ 1 km^2) across the study area (Alcaraz-Segura et al., 2013). Then, an average richness map across all years was obtained. 
+
++ ***EFT rarity*** map was calculated for each year as the relative extension of each EFT compared to the most abundant EFT (Cabello et al., 2013). Then, we calculated an average rarity map across the period.
+
+\begin{equation}
+ \label{Eq:1}
+ \textbf{Rarity of } EFT_{i} = \frac{\text{Area } EFT_{max} - \text{Area } EFT_{i}} {\text{Area }EFT_{max}}
+\end{equation}
+
+where $\text{Area } EFT_{max}$ is the area occupied by the most abundant EFT and $\text{Area } EFT_{i}$ is the area of the $i$ EFT being evaluated, with $i$ ranging from 1 to 64. 
+
+### Stability in ecosystem functioning
+
+In order to show which are the most stable areas and with the greatest inter-annual variability (either due to directional changes or fluctuations) in ecosystem functioning, the number of different EFTs that occurred in the same pixel in the period 2001-2018.
+
+To obtain a measure equal to the interannual variability but at landscape level, the dissimilarity, i.e., Jaccard's  index 1-coefficient, was calculated. Dissimilarity values range from 0 to 1, with 1 being the highest degree of dissimilarity in composition and relative abundance of EFTs and 0 being absent.
+
+
+
+Credits
+=====================================
+
+This visualization was created within the "Collaboration Agreement between the Department of Environment and Land Planning of the Regional Government of Andalusia and the University of Granada for developing activities related to the Sierra Nevada Global-Change Observatory, within the framework of the Andalusian Network of Global Change Observatories". Funding support was also received from the projects "LIFE-ADAPTAMED (LIFE14 CCA/ES/000612): Protection of key ecosystem services by adaptive management of Climate Change endangered Mediterranean socioecosystems" and the H2020 project "ECOPOTENTIAL: Improving future ecosystem benefits through earth observations" (http://www.ecopotential-project.eu/) (Agreement No 641762). 
+
+The **data** used for this visualization are available at:
+
+* Cazorla BP; Cabello J; Reyes A; Guirado E; Peñas J; Pérez-Luque AJ; Alcaraz-Segura D. (2019): Ecosystem functioning and functional diversity of Sierra Nevada (SE Spain). University of Almería and Granada, PANGAEA, https://doi.pangaea.de/10.1594/PANGAEA.904575  
+
+**More info**: 
+
+* Cazorla BP; Cabello J; Peñas J; Guirado E; Reyes A; Alcaraz-Segura D. (2019). Funcionamiento de la vegetación y diversidad funcional de los ecosistemas de Sierra Nevada. In: Peñas, J. y Lorite, J. (eds.), Biología de la Conservación de plantas en Sierra Nevada. Principios y retos para su preservación. Granada: Editorial Universidad de Granada. 
+
+<br>
+**Developer**: Pérez-Luque, AJ [ajpelu@gmail.com](mailto:ajpelu@gmail.com)  

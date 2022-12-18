@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2022-07-15 16:33:52
+[georeference]
+nrows=164
+ncols=508
+xmin=-3.64373882
+ymin=36.913925142
+xmax=-2.586617563
+ymax=37.255200508
+projection=+proj=longlat +datum=WGS84 +no_defs
+[data]
+datatype=FLT4S
+byteorder=little
+nbands=18
+bandorder=BIL
+minvalue=0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0
+maxvalue=0.997576713562012:0.99231094121933:0.997201383113861:0.998531758785248:0.998092114925385:0.997362077236176:0.998830378055573:0.994338870048523:0.999166071414948:0.999336779117584:0.999485969543457:0.995899260044098:0.987370073795319:0.995770335197449:0.998405754566193:0.992363214492798:0.99966561794281:0.998102903366089
+nodatavalue=-3.4e+38
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=EFT_Rarity_2001:EFT_Rarity_2002:EFT_Rarity_2003:EFT_Rarity_2004:EFT_Rarity_2005:EFT_Rarity_2006:EFT_Rarity_2007:EFT_Rarity_2008:EFT_Rarity_2009:EFT_Rarity_2010:EFT_Rarity_2011:EFT_Rarity_2012:EFT_Rarity_2013:EFT_Rarity_2014:EFT_Rarity_2015:EFT_Rarity_2016:EFT_Rarity_2017:EFT_Rarity_2018

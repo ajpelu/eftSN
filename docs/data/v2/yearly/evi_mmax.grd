@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2022-07-15 16:33:01
+[georeference]
+nrows=203
+ncols=1268
+xmin=-4.332651313
+ymin=36.887885287
+xmax=-1.693937641
+ymax=37.310329195
+projection=+proj=longlat +datum=WGS84 +no_defs
+[data]
+datatype=FLT4S
+byteorder=little
+nbands=18
+bandorder=BIL
+minvalue=0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0
+maxvalue=12:12:12:12:12:12:12:12:12:12:12:12:12:12:12:12:12:12
+nodatavalue=-3.4e+38
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=EVI_DMAX_2001:EVI_DMAX_2002:EVI_DMAX_2003:EVI_DMAX_2004:EVI_DMAX_2005:EVI_DMAX_2006:EVI_DMAX_2007:EVI_DMAX_2008:EVI_DMAX_2009:EVI_DMAX_2010:EVI_DMAX_2011:EVI_DMAX_2012:EVI_DMAX_2013:EVI_DMAX_2014:EVI_DMAX_2015:EVI_DMAX_2016:EVI_DMAX_2017:EVI_DMAX_2018

@@ -1,0 +1,13 @@
+name: eftSN_annual
+title: eftSN_annual
+username:
+account: ajpelu
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7913779
+bundleId: 6651248
+url: https://ajpelu.shinyapps.io/eftSN_annual/
+when: 1671400601.52447
+lastSyncTime: 1671400601.52449
+asMultiple: FALSE
+asStatic: FALSE

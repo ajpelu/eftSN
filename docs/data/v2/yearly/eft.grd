@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2022-07-15 16:33:23
+[georeference]
+nrows=164
+ncols=508
+xmin=-3.64373882
+ymin=36.913925142
+xmax=-2.586617563
+ymax=37.255200508
+projection=+proj=longlat +datum=WGS84 +no_defs
+[data]
+datatype=FLT4S
+byteorder=little
+nbands=18
+bandorder=BIL
+minvalue=0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0
+maxvalue=64:64:64:64:64:64:64:64:64:64:64:64:64:64:64:64:64:64
+nodatavalue=-3.4e+38
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=EFTs_2001:EFTs_2002:EFTs_2003:EFTs_2004:EFTs_2005:EFTs_2006:EFTs_2007:EFTs_2008:EFTs_2009:EFTs_2010:EFTs_2011:EFTs_2012:EFTs_2013:EFTs_2014:EFTs_2015:EFTs_2016:EFTs_2017:EFTs_2018

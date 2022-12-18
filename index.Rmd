@@ -2,6 +2,8 @@
 title: "Ecosystem functioning and functional diversity of Sierra Nevada"
 output: 
   flexdashboard::flex_dashboard:
+      navbar: 
+      - { title: "Download Annual maps", href: "https://ajperezluque.com", align: left }
       theme: yeti
 ---
 
@@ -20,11 +22,13 @@ library("leaflet.opacity")
 library("RColorBrewer")
 library("leaflet.esri")
 library("shiny")
+library("leafem")
+library("htmlwidgets")
 ```
 
 
 ```{r interAnnualSeries}
-## EFA 
+## EFA
 evi_mean <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_Mean/Interannual_sumary/EVI_Mean_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
 
 evi_mmax <- raster(here::here("data/v2/Ecosystem_Functional_Attributes/EVI_DMAX/Interannual_sumary/EVI_DMAX_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
@@ -41,45 +45,50 @@ NAvalue(eft_diss) <- 0
 eft_var <- raster(here::here("data/v2/Ecosystem_Functional_Types/Interannual_sumary/EFTs_InterannualVariability_2001-2018_C006_MOD13Q1_Pixel232.tif"))
 NAvalue(eft_var) <- 0
 
-## EFD 
+## EFD
 
 eft_rarity <- raster(here::here("data/v2/Ecosystem_Functional_Diversity/EFT_Rarity/Interannual_sumary/EFT_Rarity_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
 
 eft_richness <- raster(here::here("data/v2/Ecosystem_Functional_Diversity/EFT_Richness/Interannual_sumary/EFT_Richness_InterAnnualMean_2001-2018_C006_MOD13Q1_Pixel232.tif"))
 
-# Units  
+# Units
 evi_mean <- evi_mean / 10000
-evi_sSD<- evi_sSD / 10000
+evi_sSD <- evi_sSD / 10000
 
 # Add months to evi_mmax
-evi_mmax_levels <- data.frame(level = 1:12, 
-                              month = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+evi_mmax_levels <- data.frame(
+  level = 1:12,
+  month = c(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  )
+)
 evi_mmax <- ratify(evi_mmax)
-mmax_rat <-levels(evi_mmax)[[1]]
-mmax_rat <- mmax_rat %>% left_join(evi_mmax_levels, by = c("ID"="level"))
-levels(evi_mmax) <- mmax_rat 
+mmax_rat <- levels(evi_mmax)[[1]]
+mmax_rat <- mmax_rat %>% left_join(evi_mmax_levels, by = c("ID" = "level"))
+levels(evi_mmax) <- mmax_rat
 
 evi_mmax_palette <- read_csv(here::here("data/paleta_mmax.csv"))
 evi_mmax_palette <- evi_mmax_palette %>% left_join(evi_mmax_levels, by = "level")
 
-
-# eft attributes 
+# eft attributes
 # https://rdrr.io/cran/raster/man/factor.html
 eft_palette <- read_csv(here::here("data/paleta_eft.csv"))
 
-# Asign eft attributes 
-# see an example from https://annakrystalli.me/intro-r-gis/raster.html 
-eft_levels <- eft_palette %>% dplyr::select(eft_id, eft_code, eft_color) %>% as.data.frame()
+# Asign eft attributes
+# see an example from https://annakrystalli.me/intro-r-gis/raster.html
+eft_levels <- eft_palette %>%
+  dplyr::select(eft_id, eft_code, eft_color) %>%
+  as.data.frame()
 
-eft <- ratify(eft) 
+eft <- ratify(eft)
 eft_rat <- levels(eft)[[1]]
-eft_rat <- eft_rat %>% left_join(eft_levels, by=c("ID" = "eft_id"))
+eft_rat <- eft_rat %>% left_join(eft_levels, by = c("ID" = "eft_id"))
 levels(eft) <- eft_rat
 
 eftFactor <- deratify(eft, "eft_code")
 
-# Rename layers 
+# Rename layers
 names(evi_mean) <- "EVI_Mean"
 names(evi_mmax) <- "EVI_DateMax"
 names(evi_sSD) <- "EVI_sSD"
@@ -96,86 +105,171 @@ Ecosystem Functioning
 =====================================  
 
 ```{r map}
-# Palettes 
-p_evi_mean <- colorNumeric(rainbow(10, rev = TRUE), domain=values(evi_mean), na.color = "transparent")
+# Palettes
+p_evi_mean <- colorNumeric(rainbow(10, rev = TRUE), domain = values(evi_mean), na.color = "transparent")
 p_evi_sSD <- colorNumeric(rainbow(8, rev = TRUE), domain = values(evi_sSD), na.color = "transparent")
-
-# p_eft_diss <- colorNumeric(rainbow(10, rev = TRUE), domain = NULL, na.color = "transparent")
-p_eft_var <- colorNumeric(rainbow(8, rev=TRUE), domain = values(eft_var), na.color = "transparent")
-
+p_eft_var <- colorNumeric(rainbow(8, rev = TRUE), domain = values(eft_var), na.color = "transparent")
 pal <- colorNumeric(rainbow(10), domain = NULL, na.color = "transparent")
 p_inversa <- colorNumeric(rainbow(10, rev = TRUE), domain = NULL, na.color = "transparent")
 
-
 myext <- extent(evi_mean)
 
-
-# opacity = 0.6
-m <- leaflet() %>% 
-    fitBounds(myext@xmin, myext@ymin, myext@xmax, myext@ymax) %>% 
-  addTiles(group = 'Basemap') %>% 
-  addProviderTiles("Esri.WorldImagery", group="Satellite") %>% 
-  # EFTs 
-  addRasterImage(eftFactor, group = "EFT",
-                 colors = eft_palette$eft_color) %>% 
-  addLegend(title = "EFT", colors = eft_palette$eft_color, 
-            labels = eft_palette$eft_nameLegend,
-            group = "EFT") %>% 
-  # EVI mean 
-  addRasterImage(evi_mean, group = "EVI mean", 
-                 colors = p_evi_mean) %>% 
-  addLegend(title = "EVI mean", pal = p_evi_mean, 
-            values = values(evi_mean), 
-            group = "EVI mean") %>%
+m <- leaflet() %>%
+  # fitBounds(myext@xmin, myext@ymin, myext@xmax, myext@ymax) %>%
+  setView(lat = 37.09, lng = -3.1, 11) %>%
+  addTiles(group = "Basemap") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+  # EFTs
+  addRasterImage(eftFactor,
+    group = "EFT",
+    colors = eft_palette$eft_color
+  ) %>%
+  leafem::addImageQuery(eftFactor,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT",
+    position = "bottomleft",
+    digits = 0
+  ) %>%
+  addLegend(
+    title = "EFT", colors = eft_palette$eft_color,
+    labels = eft_palette$eft_nameLegend,
+    group = "EFT"
+  ) %>%
+  # EVI mean
+  addRasterImage(evi_mean,
+    group = "EVI mean",
+    colors = p_evi_mean
+  ) %>%
+  leafem::addImageQuery(evi_mean,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EVI mean",
+    position = "bottomleft",
+    digits = 3
+  ) %>%
+  addLegend(
+    title = "EVI mean", pal = p_evi_mean,
+    values = values(evi_mean),
+    group = "EVI mean"
+  ) %>%
   # EVI mmax
   addRasterImage(evi_mmax,
-                 group = "EVI mMax", 
-                 colors = evi_mmax_palette$color) %>% 
-  addLegend(title = "EVI mMax", colors = evi_mmax_palette$color, 
-            labels = evi_mmax_palette$month,
-            group = "EVI mMax") %>% 
+    group = "EVI mMax",
+    colors = evi_mmax_palette$color
+  ) %>%
+  leafem::addImageQuery(evi_mmax,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EVI mMax",
+    position = "bottomleft",
+    digits = 0
+  ) %>%
+  addLegend(
+    title = "EVI mMax", colors = evi_mmax_palette$color,
+    labels = evi_mmax_palette$month,
+    group = "EVI mMax"
+  ) %>%
   # EVI sSD
-  addRasterImage(evi_sSD, group = "EVI sSD",
-                 colors = p_evi_sSD) %>% 
-  addLegend(title = "EVI sSD", 
-            pal = p_evi_sSD, 
-            values = values(evi_sSD), 
-            group = "EVI sSD") %>% 
-  # EFT var 
-  addRasterImage(eft_var, group = "EFT inter-annual variability",
-                 colors = p_eft_var) %>% 
-  addLegend(title = "EFT inter-annual variability", 
-            pal = p_eft_var, 
-            values = values(eft_var), 
-            group = "EFT inter-annual variability") %>% 
-  # EFT diss 
-  addRasterImage(eft_diss, group = "EFT Dissimilarity",
-                 colors = p_inversa) %>% 
-  addLegend(title = "Dissimilarity", 
-            pal = p_inversa, 
-            values = values(eft_diss), 
-            group = "EFT Dissimilarity") %>% 
-  # EFT rarity 
-  addRasterImage(eft_rarity, group = "EFT rarity", 
-                 colors = p_inversa) %>% 
-  addLegend(title = "EFT rarity", pal = pal,
-            values = values(eft_rarity), 
-            group = "EFT rarity") %>% 
-  # EFT richness 
-  addRasterImage(eft_richness, group = "EFT richness", 
-                 colors = p_inversa) %>% 
-  addLegend(title = "EFT richness", pal = p_inversa, 
-            values = values(eft_richness), 
-            group = "EFT richness") %>%
-  addLayersControl(position = "topleft", 
-                   baseGroups = c("Satellite", "BaseMap"),
-                   overlayGroups = c("EFT", "EVI mean", "EVI mMax", "EVI sSD",
-                                     "EFT inter-annual variability", "EFT Dissimilarity", 
-                                     "EFT rarity", "EFT richness"),
-                   options = layersControlOptions(collapsed = TRUE))
-                   
+  addRasterImage(evi_sSD,
+    group = "EVI sSD",
+    colors = p_evi_sSD
+  ) %>%
+  leafem::addImageQuery(evi_sSD,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EVI sSD",
+    position = "bottomleft",
+    digits = 3
+  ) %>%
+  addLegend(
+    title = "EVI sSD",
+    pal = p_evi_sSD,
+    values = values(evi_sSD),
+    group = "EVI sSD"
+  ) %>%
+  # EFT var
+  addRasterImage(eft_var,
+    group = "EFT inter-annual variability",
+    colors = p_eft_var
+  ) %>%
+  leafem::addImageQuery(eft_var,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT inter-annual variability",
+    position = "bottomleft",
+    digits = 2
+  ) %>%
+  addLegend(
+    title = "EFT inter-annual variability",
+    pal = p_eft_var,
+    values = values(eft_var),
+    group = "EFT inter-annual variability"
+  ) %>%
+  # EFT diss
+  addRasterImage(eft_diss,
+    group = "EFT Dissimilarity",
+    colors = p_inversa
+  ) %>%
+  leafem::addImageQuery(eft_diss,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT Dissimilarity",
+    position = "bottomleft",
+    digits = 1
+  ) %>%
+  addLegend(
+    title = "Dissimilarity",
+    pal = p_inversa,
+    values = values(eft_diss),
+    group = "EFT Dissimilarity"
+  ) %>%
+  # EFT rarity
+  addRasterImage(eft_rarity,
+    group = "EFT rarity",
+    colors = p_inversa
+  ) %>%
+  leafem::addImageQuery(eft_rarity,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT rarity",
+    position = "bottomleft",
+    digits = 1
+  ) %>%
+  addLegend(
+    title = "EFT rarity", pal = pal,
+    values = values(eft_rarity),
+    group = "EFT rarity"
+  ) %>%
+  # EFT richness
+  addRasterImage(eft_richness,
+    group = "EFT richness",
+    colors = p_inversa
+  ) %>%
+  leafem::addImageQuery(eft_richness,
+    project = TRUE,
+    type = "mouse",
+    layerId = "EFT richness",
+    position = "bottomleft",
+    digits = 0
+  ) %>%
+  addLegend(
+    title = "EFT richness", pal = p_inversa,
+    values = values(eft_richness),
+    group = "EFT richness"
+  ) %>%
+  addLayersControl(
+    position = "topleft",
+    baseGroups = c("Satellite", "BaseMap"),
+    overlayGroups = c(
+      "EFT", "EVI mean", "EVI mMax", "EVI sSD",
+      "EFT inter-annual variability", "EFT Dissimilarity",
+      "EFT rarity", "EFT richness"
+    ),
+    options = layersControlOptions(collapsed = TRUE)
+  )
 
-mapita <- m %>% 
+mapita <- m %>%
   leaflet::hideGroup("EVI mean") %>%
   leaflet::hideGroup("EVI sSD") %>%
   leaflet::hideGroup("EVI mMax") %>%
@@ -184,72 +278,12 @@ mapita <- m %>%
   leaflet::hideGroup("EFT richness") %>%
   leaflet::hideGroup("EFT rarity") %>%
   leaflet::hideGroup("Dissimilarity")
-  
+
 mapita
 ```
 
 
-Annual Maps
-=====================================
 
-Colum {.sidebar data-width=200} 
----------------------------------------- 
-  
-```{r, eval=FALSE}
-
-s <- raster::stack(here::here("data/v2/stacks/all_rasters.grd"))
-
-selectInput(inputId = "selectVariable", 
-            label = "Variable:",
-            choices = c("EVI Mean" = "EVI_Mean_", 
-                        "EVI sSD" = "EVI_sSD_",
-                        "EVI DMAX" = "EVI_DMAX_",
-                        "EFTs" = "EFTs_",
-                        "EFT Rarity" = "EFT_Rarity_",
-                        "EFT Richness" = "EFT_Richness_", 
-                        selected = "l2")
-            )
-
-selectInput(inputId = "selectYear", 
-            label = "Year:", 
-            choices = c(2001:2018), 
-            selected = 2001)
-```
-
-Column {data-width=800}
--------------------------------------
-  
-```{r, eval=FALSE}
-
-#layer_name <- reactiveValues(value=NULL)
-
-# observe({ 
-#   variable <- input$selectVariable 
-#   year <- input$selectYear
-#   
-#   layer_name$value <- paste(variable, year, sep = ".")
-#   })
-
-rasterInput <- reactive({
-  layer_name <- paste0(input$selectVariable, input$selectYear)
-  
-  r <- s[[layer_name]] 
-})
-
-paleta <- reactive({
-  pal <- colorNumeric("RdYlBu", values(rasterInput()),
-                      na.color = "transparent")  
-})
-
-
-
-
-renderLeaflet({
-  leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
-    addRasterImage(rasterInput(), colors = paleta()) %>% 
-    addLegend(position = "bottomright", pal = paleta(), values = values(rasterInput()))
-})
-```
 
 Info
 =====================================
@@ -313,7 +347,4 @@ The **data** used for this visualization are available at:
 * Cazorla BP; Cabello J; Peñas J; Guirado E; Reyes A; Alcaraz-Segura D. (2019). Funcionamiento de la vegetación y diversidad funcional de los ecosistemas de Sierra Nevada. In: Peñas, J. y Lorite, J. (eds.), Biología de la Conservación de plantas en Sierra Nevada. Principios y retos para su preservación. Granada: Editorial Universidad de Granada. 
 
 <br>
-**Developer**: Pérez-Luque, AJ [ajperez@ugr.es](mailto:ajperez@ugr.es)  
-
-
-
+**Developer**: Pérez-Luque, AJ [ajpelu@gmail.com](mailto:ajpelu@gmail.com)  
