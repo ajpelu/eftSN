@@ -3,8 +3,10 @@ title: "Ecosystem functioning and functional diversity of Sierra Nevada"
 output: 
   flexdashboard::flex_dashboard:
       navbar: 
-      - { title: "Download Annual maps", href: "https://ajperezluque.com", align: left }
+      - { title: "Download Annual maps", href: "http://vlab.iecolab.es/ajpelu/eftSN_annual/", align: right}
       theme: yeti
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -24,6 +26,7 @@ library("leaflet.esri")
 library("shiny")
 library("leafem")
 library("htmlwidgets")
+library("leaflegend")
 ```
 
 
@@ -105,12 +108,17 @@ Ecosystem Functioning
 =====================================  
 
 ```{r map}
+
 # Palettes
 p_evi_mean <- colorNumeric(rainbow(10, rev = TRUE), domain = values(evi_mean), na.color = "transparent")
 p_evi_sSD <- colorNumeric(rainbow(8, rev = TRUE), domain = values(evi_sSD), na.color = "transparent")
 p_eft_var <- colorNumeric(rainbow(8, rev = TRUE), domain = values(eft_var), na.color = "transparent")
 pal <- colorNumeric(rainbow(10), domain = NULL, na.color = "transparent")
 p_inversa <- colorNumeric(rainbow(10, rev = TRUE), domain = NULL, na.color = "transparent")
+
+
+p_eft <- colorFactor(eft_palette$eft_color, eft_palette$eft_nameLegend)
+
 
 myext <- extent(evi_mean)
 
@@ -128,14 +136,17 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EFT",
-    position = "bottomleft",
+    position = "topleft",
     digits = 0
   ) %>%
-  addLegend(
-    title = "EFT", colors = eft_palette$eft_color,
-    labels = eft_palette$eft_nameLegend,
-    group = "EFT"
-  ) %>%
+  addLegendFactor(title = "EFT",
+                  orientation = 'horizontal',
+                  labelStyle = 'font-size: 11px;',
+                  pal = p_eft,
+                  values = eft_palette$eft_nameLegend,
+                  width = 11, height = 11,
+                  position = 'bottomright',
+                  group = 'EFT') %>%
   # EVI mean
   addRasterImage(evi_mean,
     group = "EVI mean",
@@ -145,7 +156,7 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EVI mean",
-    position = "bottomleft",
+    position = "topleft",
     digits = 3
   ) %>%
   addLegend(
@@ -162,8 +173,9 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EVI mMax",
-    position = "bottomleft",
-    digits = 0
+    position = "topleft",
+    digits = 0, 
+    
   ) %>%
   addLegend(
     title = "EVI mMax", colors = evi_mmax_palette$color,
@@ -179,7 +191,7 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EVI sSD",
-    position = "bottomleft",
+    position = "topleft",
     digits = 3
   ) %>%
   addLegend(
@@ -197,7 +209,7 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EFT inter-annual variability",
-    position = "bottomleft",
+    position = "topleft",
     digits = 2
   ) %>%
   addLegend(
@@ -215,7 +227,7 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EFT Dissimilarity",
-    position = "bottomleft",
+    position = "topleft",
     digits = 1
   ) %>%
   addLegend(
@@ -233,7 +245,7 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EFT rarity",
-    position = "bottomleft",
+    position = "topleft",
     digits = 1
   ) %>%
   addLegend(
@@ -250,7 +262,7 @@ m <- leaflet() %>%
     project = TRUE,
     type = "mouse",
     layerId = "EFT richness",
-    position = "bottomleft",
+    position = "topleft",
     digits = 0
   ) %>%
   addLegend(
